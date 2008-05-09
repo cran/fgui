@@ -201,7 +201,7 @@ mgui <- function( func,
                   callback=NULL,
                   output='m',
                   helps='auto', helpsFunc=NULL,
-                  grid=TRUE, modal=TRUE, nameFix=TRUE,
+                  grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
                   verbose=FALSE ) {
   call <- match.call(expand.dots = FALSE)
   funcName <- call[[match("func", names(call))]]
@@ -221,7 +221,7 @@ mgui <- function( func,
                       callback=callback,
                       output=output,
                       helps=helps, helpsFunc=helpsFunc,
-                      grid=grid, modal=modal, nameFix=nameFix,
+                      grid=grid, modal=modal, nameFix=nameFix, getFix=getFix,
                       verbose=verbose )
                } )
 }

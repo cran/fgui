@@ -32,7 +32,7 @@ gui( func,
      callback=NULL,
      output='m',
      helps='auto', helpsFunc=NULL,
-     grid=TRUE, modal=TRUE, nameFix=TRUE,
+     grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
      verbose=FALSE )
 guiNestedF( func, nestArg, title=nestArg, exec=NULL, output=NULL, ... )
 guiExec( lastTouched=NULL )
@@ -48,7 +48,7 @@ mgui( func,
       callback=NULL,
       output='m',
       helps='auto', helpsFunc=NULL,
-      grid=TRUE, modal=TRUE, nameFix=TRUE,
+      grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
       verbose=FALSE )
 fguiNewMenu( menuText, command=function(){print(paste(menuText,collapse=" > "))} )
 fguiWindow( basicMenu=TRUE, title="fgui", text="Please choose an option from the menu." )
@@ -90,6 +90,7 @@ fguiWindowPrint( text, endl=TRUE )
   \item{grid}{whether to grid the objects or not (otherwise, just let the user do it)}
   \item{modal}{lock input away from R, suggested}
   \item{nameFix}{boolean, tries to fix names (replaces underscore and period with a space).}
+  \item{getFix}{boolean, tries to fix strings that represent R objects - so for instance, if a user wanted to user the dataset 'rivers', they would only need to type 'rivers' (without the quotation marks) to represent the dataset.}
 
   \item{sticky}{A combination of 'news' for placement.}
   \item{verbose}{Prints out verbose output. Only useful to try to understand what it is doing if you are wanting to customize.}
@@ -231,15 +232,10 @@ gui( sli,
 ## Suppose you want a user to be able to enter a vector of data,
 ##  then you can use the following as an example for that.
 summaryStats <- function( data ) {
-  if( is.character(data) ) {
-    ## Then it came from the gui, convert it
-    data <- eval( parse( text=data ) )
-  }
-
   return( paste( "Mean = ", mean(data), ", Variance = ", var(data), sep="" ) )
 }
 
-gui( summaryStats, helps=list(data="Enter the data as an R vector, e.g. 'c(13,66,44,27)'.") )
+gui( summaryStats, helps=list(data="Enter the data as an R vector, e.g. 'c(13,66,44,27)' or enter the text 'rivers' to use a builtin dataset (without quotes).") )
 }
 
 \dontrun{

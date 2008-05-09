@@ -211,9 +211,12 @@ gui <- function( func,
                  callback=NULL,
                  output='m',
                  helps='auto', helpsFunc=NULL,
-                 grid=TRUE, modal=TRUE, nameFix=TRUE,
+                 grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
                  verbose=FALSE ) {
   require( tcltk )
+
+  ## Store the getFix (05/09/2008)
+  guiSet( "GUIINTERNALS_getFix", getFix )
 
   ## Allow nesting
   if( modal )
@@ -221,8 +224,15 @@ gui <- function( func,
 
   ## parses the passed in function to widgets!
   farg <- formals( func )
+  farg <- farg[ names(farg) != "..." ] ## (05/09/2008)
   fargNames <- names(farg)
   fargTypes <- rep('t',length(farg))
+
+  ## Fix up farg a little more... infernal boxplot.default... (05/09/2008)
+  for( i in 1:length(farg) ) {
+    if( !is.element( class(farg[[i]]), c("numeric","logical","character") ) || is.na(farg[[i]] ) )
+      farg[[i]] <- ""
+  }
 
   ## store in the text (in case user wants a different name)
   fargText <- fargNames
@@ -338,7 +348,7 @@ gui <- function( func,
     pos <- length(fargTypes)+1
     fargTypes[pos] <- 'c'
     fargNames[pos] <- exec
-    fargText[pos] <- "Execute ..."
+    fargText[pos] <- exec ## "Execute ..."  (05/09/2008)
     if( is.null(argCommand) ) argCommand <- list()
     pos2 <- length(argCommand)+1
     argCommand[[pos2]] <- guiExec
@@ -657,7 +667,30 @@ guiExec <- function( lastTouched=NULL ) {
   ## Below really should work just fine
   ## But some funniness with R deciding lists
   ## Are just vectors, to piss us off
-  formals(func) <- value
+  #formals(func) <- value
+  ## (05/09/2008)
+
+  namesValue <- names(value)
+  namesFormalsFunc <- names(formals(func))
+  for( v in 1:length(value) ) {                      ## v indices value
+    f <- which( namesFormalsFunc == namesValue[v] )  ## f indices formals(func)
+
+    ##cat( "names", namesValue[[v]], namesFormalsFunc[[f]], "\n" )
+
+    ## precaution
+    if( names(value)[1] == "..." ) {
+      stop("guiExec: '...' should have been caught earlier!")
+    }
+
+    if( is.character(value[[v]]) && nchar(value[[v]])==0 ) {
+      ## Then it's an empty character, don't modify anything
+    }else{
+      formals(func)[[f]] <- value[[v]]
+      if( guiGet("GUIINTERNALS_getFix") == TRUE )
+        try( formals(func)[[f]] <- eval(parse(text=value[[v]])), silent=TRUE )
+    }
+  }
+
 
   res <- NULL;
   tryCatch( {res <- func()},
@@ -668,13 +701,13 @@ guiExec <- function( lastTouched=NULL ) {
 
   if( !is.null(res) ) {
     if( output=='m' ) {
-      gui_tkInsertText( object[[length(object)]], res )
+      gui_tkInsertText( object[[length(object)]], as.character(res) )    ## 05/09/2008 -- as.character
       gui_tkInsertText( object[[length(object)]], "\n" )
     }else if( output=='t' ) {
       ##gui_tkSetText( object[[length(object)]], res )
-      tclvalue(object[[length(object)]]) <- res
+      tclvalue(object[[length(object)]]) <- as.character(res)  ## 05/09/2008 -- as.character
     }else if( output=='s' ) {
-      tclvalue(object[[length(object)]]) <- res
+      tclvalue(object[[length(object)]]) <- as.character(res)  ## 05/09/2008
     }
 
     ## 05/16/2008 addition!
@@ -682,7 +715,7 @@ guiExec <- function( lastTouched=NULL ) {
     if( is.na( winExists ) || !winExists ) {
       ## oops --- nothing really! had it backwards
     }else{
-      fguiWindowPrint( res )
+      fguiWindowPrint( as.character(res) )
     }
   }
 }
