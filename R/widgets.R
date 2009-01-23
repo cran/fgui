@@ -205,18 +205,36 @@ unnest <- function( n ) {
 gui <- function( func,
                  argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL, argCommand=NULL, argEdit=NULL, argFilter=NULL,
                  argText=NULL, argType=NULL,
-                 argGridOrder=1:length(formals(func)), sticky="nws",
+                 argGridOrder=1:length(formals(func)),
+                  argGridSticky=rep("a",length(formals(func))),
+                  argGridFrame=rep("f",length(formals(func))),
                  title=NULL,
-                 exec="Calculate ...",
+                 exec="OK",
+                 closeOnExec=is.null(output), cancelButton=TRUE,
                  callback=NULL,
                  output='m',
                  helps='auto', helpsFunc=NULL,
-                 grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
+                 grid=TRUE, modal=NULL, nameFix=TRUE, getFix=TRUE,
                  verbose=FALSE ) {
   require( tcltk )
 
+  if( verbose ) {
+    print( "argGrid..." )
+    print( argGridOrder )
+    print( argGridSticky )
+    print( argGridFrame )
+  }
+  #stop()
+
   ## Store the getFix (05/09/2008)
   guiSet( "GUIINTERNALS_getFix", getFix )
+
+  ## 01/23/2009
+  modalDefault <- FALSE
+  if( is.null(modal) ) {
+    modalDefault <- TRUE ## special message to developer
+    modal <- TRUE ## and set the default to be true
+  }
 
   ## Allow nesting
   if( modal )
@@ -228,10 +246,25 @@ gui <- function( func,
   fargNames <- names(farg)
   fargTypes <- rep('t',length(farg))
 
+  #print( "farg" )
+  #print( farg )
+  #print( farg[[1]] )
+
   ## Fix up farg a little more... infernal boxplot.default... (05/09/2008)
   for( i in 1:length(farg) ) {
-    if( !is.element( class(farg[[i]]), c("numeric","logical","character") ) || is.na(farg[[i]] ) )
+    #if( !is.element( class(farg[[i]]), c("numeric","logical","character") ) || is.na(farg[[i]] ) )
+    #  farg[[i]] <- ""
+    if( !is.element( class(farg[[i]]), c("numeric","logical","character","NULL") ) )
       farg[[i]] <- ""
+
+    ## 01.23.2009
+    #cat( str(farg[[i]]), "before\n" )
+    ####try(  if( is.nan( farg[[i]] ) ) farg[[i]] <- "NaN",  silent=TRUE  ) ## A little confused between NA and NaN??
+    ####try(  if( is.na( farg[[i]] ) ) farg[[i]] <- "NA",  silent=TRUE  )
+    tryCatch(  if( is.nan( farg[[i]] ) ) farg[[i]] <- "NaN",  warning=function(e){},  error=function(e){}  ) ## A little confused between NA and NaN??
+    tryCatch(  if( is.na( farg[[i]] ) ) farg[[i]] <- "NA",  warning=function(e){}, error=function(e){}  )
+    #try(  if( is.null( farg[[i]] ) ) farg[[i]] <- "NULL" )  ## Not Necessary?
+    #cat( str(farg[[i]]), "after\n" )
   }
 
   ## store in the text (in case user wants a different name)
@@ -342,6 +375,7 @@ gui <- function( func,
   }
 
   ## Add a command button on the end if exec isn't empty
+  okButtonGridOrder <- NULL
   if( !is.null(exec) && nchar(exec)>0 ) {
     if( verbose ) cat( "Adding command button...\n" )
 
@@ -352,12 +386,53 @@ gui <- function( func,
     if( is.null(argCommand) ) argCommand <- list()
     pos2 <- length(argCommand)+1
     argCommand[[pos2]] <- guiExec
+    if( closeOnExec ) { ## 01.27.2009
+      argCommand[[pos2]] <- function() {
+        res <- guiExec()
+        tkdestroy(guiGet("MAIN"))
+        guiSet( "FGUI_INTERNAL_last_result", res ) ## 02.02.2009
+        return(res)
+      }
+    }
     names(argCommand)[pos2] <- exec
 
     commandList <- names(argCommand)
     argGridOrder[pos] <- max(argGridOrder)+1
+    argGridSticky[pos] <- "ns"
+    argGridFrame[pos] <- "f"
+    okButtonGridOrder <- argGridOrder[pos]
   }
   if( verbose ) cat( "Determined output format 1...\n" )
+
+  ## New, add a cancel button
+  guiSet( "GUIINTERNALS_cancelled", FALSE )
+  if( cancelButton ) {
+    if( verbose ) cat( "Adding cancel button...\n" )
+
+    pos <- length(fargTypes)+1
+    fargTypes[pos] <- 'c'
+    fargNames[pos] <- "cancel"
+    fargText[pos] <- "Cancel"
+    if( is.null(argCommand) ) argCommand <- list()
+    pos2 <- length(argCommand)+1
+    argCommand[[pos2]] <-
+      function() {
+        cat( "Cancelled.\n" )
+        guiSet( "GUIINTERNALS_cancelled", TRUE )
+        tkdestroy(main)
+      }
+    names(argCommand)[pos2] <- "cancel"
+    commandList <- names(argCommand)
+    if( !is.null(okButtonGridOrder) ) {
+      argGridOrder[pos] <- okButtonGridOrder  ## Right next to the OK button
+      argGridSticky[pos] <- "ns"
+      argGridFrame[pos] <- "f"
+    }else{
+      argGridOrder[pos] <- max(argGridOrder)+1
+      argGridSticky[pos] <- "ns"
+      argGridFrame[pos] <- "f"
+    }
+  }
 
   ## add in a status box
   #if( statusBox && (output!='m'&&output!='t') ) {
@@ -390,6 +465,8 @@ gui <- function( func,
     pos <- length(fargTypes)+1
     fargNames[pos] <- 'output'
     fargText[pos] <- "Output:"
+    if( is.element('output',textNames) )
+      fargText[pos] <- elt(argText,'output')
     if( output=='m' ) {
       fargTypes[pos] <- 'm'
       if( is.null(argEdit) ) argEdit <- list()
@@ -410,6 +487,8 @@ gui <- function( func,
       fargTypes[pos] <- 't'
     }
     argGridOrder[pos] <- max(argGridOrder)+1
+    argGridSticky[pos] <- "news"
+    argGridFrame[pos] <- "g"
   }
   if( verbose ) cat( "Output added to lists...\n" )
 
@@ -428,69 +507,139 @@ gui <- function( func,
   guiSet( "MAIN", main ) ## for cursor
 
   ## Create all the widgets
+  ##for( i in 1:length(fargNames) ) {
   object <- list()
   guiObject <- list()
-  for( i in 1:length(fargNames) ) {
-    if( verbose ) cat( "Creating widget ", i, "\n" )
-    helpsi <- elt(helps,fargNames[i],die=FALSE)
-    if( fargTypes[i] == 't' ) {
-      ## Text entry
-      #var <-  tclVar(gv(i))
-      #res <- guiTextEntry( var, fargText[i], main, helps=helpsi )
-      res <- guiTextEntry( sframe=main, text=fargText[i], default=gv(i), helps=helpsi )
-    }else if( fargTypes[i] == 's' ) {
-      ## Slider
-      range <- elt( argSlider, fargNames[i] )
-      if( length(range) < 2 )
-        stop( "Slider ranges must be a vector of two numeric values, with an optional 3rd argument stepsize." )
-      if( length(range) == 2 )
-        range[3] <- (range[2]-range[1])/100
-      value <- gv( i, range[1] )
-      res <- guiSlider( text=fargText[i], default=value, min=range[1], max=range[2], step=range[3], sframe=main, update=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
-    }else if( fargTypes[i] == 'f' ) {
-      ## Input filenames
-      value <- gv( i )
-      #callback <- NULL
-      filter <- elt( argFilter, fargNames[i], die=FALSE )
-      if( is.null(filter) ) filter <- "{{All files} {.*}}"
-      res <- guiFilename( main, text=fargText[i], default=value, filter=filter, callback=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
-    }else if( fargTypes[i] == 'o' ) {
-      ## options box
-      res <- guiOption( main, fargText[i], elt(argOption,fargNames[i]), update=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
-    }else if( fargTypes[i] == 'l' ) {
-      ## list box
-      res <- guiList( main, fargText[i], fargNames[i], update=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
-    }else if( fargTypes[i] == 'c' ) {
-      ## command button
-      res <- list()
-      res$object <- "no object"
-      #res$guiObject <- tkbutton( main, text=fargNames[i], command=elt(argCommand,fargNames[i]) )
-      res$guiObject <- tkbutton( main, text=fargText[i], command=guiExecUpdateFunc(fargNames[i],callback,elt(argCommand,fargNames[i],die=FALSE)) )
-    }else if( fargTypes[i] == 'm' ) {
-      ## multi-line edit
-      values <- elt(argEdit,fargNames[i])
-      #print( values )
-      width <- guiGet("EDIT_WIDTH")
-      height <- guiGet("EDIT_HEIGHT")
-      readonly <- TRUE
-      if( length(values) > 0 && !is.na(values[1]) ) width <- values[1]
-      if( length(values) > 1 && !is.na(values[2]) ) height <- values[2]
-      if( length(values) > 2 && !is.na(values[3]) ) readonly <- (values[3]==TRUE)
-      res <- guiEdit( main, fargText[i], gv(i), width, height, readonly, helps=helpsi )
-    }else if( fargTypes[i] == 'i' ) {
-      res <- list(object=NULL,guiObject=NULL)
+  i <- 1
+  for( ago in unique(argGridOrder) ) {
+    #print( "ago" )
+    #print( ago )
+    #print( "argGridOrder" )
+    #print( argGridOrder )
+  
+    agos <- which( argGridOrder == ago )
+    
+    sframe <- main
+    #print( "argGridFrame" )
+    #print( argGridFrame )
+    #print( "agos" )
+    #print( agos )
+    if( argGridFrame[agos][1] == "f" ) {
+      sframe <- guiFrame( main, borderwidth=0 )
+      tkgrid( sframe )
+      ##sticky <- "news" ## codeTools -- 02/11/2009
+      if( argGridSticky[agos][1] != 'a' ) {
+        tkgrid.configure( sframe, sticky=argGridSticky[agos][1] )
+      }else if( fargTypes[agos][1] == 't' || fargTypes[agos][1] == 'f' ) {
+        tkgrid.configure( sframe, sticky="nes" )
+      }else{
+        tkgrid.configure( sframe, sticky="nws" )
+      }
+      #if( fargTypes[agos][1] == 't' ) {
+      #  if( argGridSticky[agos][1] == 'a' ) {
+      #    tkgrid.configure( sframe, sticky="nes" ) ## default placement hack
+      #  }else{
+      #    tkgrid.configure( sframe, sticky=argGridSticky[agos][1] )
+      #  }
+      #}else{
+      #  ## default (essentially nws, really)
+      #  tkgrid.configure( sframe, sticky="news" )
+      #}
     }
-    object[[i]] <- res$object
-    guiObject[[i]] <- res$guiObject
-  }
+
+    ## Create an object for each
+    for( a in agos ) {
+      if( verbose ) cat( "Creating widget ", i, "\n" )
+      helpsi <- elt(helps,fargNames[i],die=FALSE)
+      res <- NULL
+      
+      if( fargTypes[i] == 't' ) {
+        ## Text entry
+        #var <-  tclVar(gv(i))
+        #res <- guiTextEntry( var, fargText[i], main, helps=helpsi )
+        res <- guiTextEntry( sframe=sframe, text=fargText[i], default=gv(i), helps=helpsi )
+        if( argGridSticky[i] == 'a' ) {
+          argGridSticky[i] <- "nes"
+          ##print( "WTF?" )
+        }
+      }else if( fargTypes[i] == 's' ) {
+        ## Slider
+        range <- elt( argSlider, fargNames[i] )
+        if( length(range) < 2 )
+          stop( "Slider ranges must be a vector of two numeric values, with an optional 3rd argument stepsize." )
+        if( length(range) == 2 )
+          range[3] <- (range[2]-range[1])/100
+        value <- gv( i, range[1] )
+        res <- guiSlider( text=fargText[i], default=value, min=range[1], max=range[2], step=range[3], sframe=sframe, update=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
+        if( argGridSticky[i] == 'a' )
+          argGridSticky[i] <- "nws"
+      }else if( fargTypes[i] == 'f' ) {
+        ## Input filenames
+        value <- gv( i )
+        #callback <- NULL
+        filter <- elt( argFilter, fargNames[i], die=FALSE )
+        if( is.null(filter) ) filter <- "{{All files} {.*}}"
+        if( argGridSticky[i] == 'a' )
+          argGridSticky[i] <- "nws"
+        res <- guiFilename( sframe, text=fargText[i], default=value, filter=filter, callback=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
+      }else if( fargTypes[i] == 'o' ) {
+        ## options box
+        res <- guiOption( sframe, fargText[i], elt(argOption,fargNames[i]), update=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
+        if( argGridSticky[i] == 'a' )
+          argGridSticky[i] <- "nws"
+      }else if( fargTypes[i] == 'l' ) {
+        ## list box
+        res <- guiList( sframe, fargText[i], fargNames[i], update=guiExecUpdateFunc(fargNames[i],callback), helps=helpsi )
+        if( argGridSticky[i] == 'a' )
+          argGridSticky[i] <- "nws"
+      }else if( fargTypes[i] == 'c' ) {
+        ## command button
+        res <- list()
+        res$object <- "no object"
+        #res$guiObject <- tkbutton( main, text=fargNames[i], command=elt(argCommand,fargNames[i]) )
+        res$guiObject <- tkbutton( sframe, text=fargText[i], command=guiExecUpdateFunc(fargNames[i],callback,elt(argCommand,fargNames[i],die=FALSE)) )
+        if( argGridSticky[i] == 'a' )
+          argGridSticky[i] <- "nws"
+      }else if( fargTypes[i] == 'm' ) {
+        ## multi-line edit
+        values <- elt(argEdit,fargNames[i])
+        #print( values )
+        width <- guiGet("EDIT_WIDTH")
+        height <- guiGet("EDIT_HEIGHT")
+        readonly <- TRUE
+        if( length(values) > 0 && !is.na(values[1]) ) width <- values[1]
+        if( length(values) > 1 && !is.na(values[2]) ) height <- values[2]
+        if( length(values) > 2 && !is.na(values[3]) ) readonly <- (values[3]==TRUE)
+        res <- guiEdit( sframe, fargText[i], gv(i), width, height, readonly, helps=helpsi )
+        if( argGridSticky[i] == 'a' )
+          argGridSticky[i] <- "news"
+      }else if( fargTypes[i] == 'i' ) {
+        res <- list(object=NULL,guiObject=NULL)
+      }
+
+      #i <- length(object) + 1
+      object[[i]] <- res$object
+      guiObject[[i]] <- res$guiObject
+      i <- i + 1
+    }## a
+
+    ## Now grid the objects
+    ##argGridSticky[agos] <- "nws"
+    if( verbose ) cat( "Gridding widgets ", paste(agos,collapse="-"), "\n", sep="" )
+    ##guiGrid( guiObject, sticky=argGridSticky[agos] )
+    ###guiGrid( subset( guiObject, argGridOrder==ago ), sticky="nws" )
+    guiGrid( subset( guiObject, argGridOrder==ago ), sticky=argGridSticky[agos] )
+    
+  }## unique(argGridOrder)
+  ##}
 
   ## Draw all the objects
-  if( grid ) {
-    for( ago in unique(argGridOrder) ) {
-      if( verbose ) cat( "Gridding widget",ago,"\n" )
-      guiGrid( subset( guiObject, argGridOrder==ago ), sticky=sticky )
-    }
-  }
+  #if( grid ) {
+  #  for( ago in unique(argGridOrder) ) {
+  #    if( verbose ) cat( "Gridding widget",ago,"\n" )
+  #    guiGrid( subset( guiObject, argGridOrder==ago ), sticky=sticky )
+  #  }
+  #}
 
   ## Set some things in the globs, so user can do it, etc.
   guiSet( "object", object )
@@ -501,14 +650,26 @@ gui <- function( func,
   guiSet( "output", output )
 
   ## Update output if necessary
-  if( !is.null(output) && output!='m' )
+  if( !is.null(output) && output!='m' ) ##&& !closeOnExec ) ## Not sure if I want this last piece
     guiExec()
 
   ## lastly, should we go modal?
-  if( modal ) {
-    cat( "Close '", title, "' window to return to R (sometimes R will steal the focus, esp. in windows).\n", sep="" )
+  if( modalDefault ) {
+    ## Notify developer it can be set
+    cat( "Close '", title, "' window to allow entering commands in the R console; that window has gone modal. Note that the '", title, "' window may be hidden from view (esp. in windows), and you may have to find it in the taskbar and close it. To the developer, the modality of a window can be set.\n" )
     tkwait.window(main)
+  }else if( modal ) {
+    cat( "Close '", title, "' window to allow entering commands in the R console; that window has gone modal. Note that the '", title, "' window may be hidden from view (esp. in windows), and you may have to find it in the taskbar and close it.\n" )
+    #cat( "Close '", title, "' window to return to R (sometimes R will steal the focus, esp. in windows).\n", sep="" )
+    tkwait.window(main)
+  }else{
+    ## Not modal
+    cat( "The '", title, "' window has been launched. Note that the '", title, "' window may be hidden from view (esp. in windows) and you may need to click on it in the taskbar.\n" )
   }
+
+  ## If cancelled, don't return a value
+  if( guiGet( "GUIINTERNALS_cancelled" ) == TRUE )
+    return( NULL )
 
   ## And return all the values...
   allValues <- guiGetAllValues()
@@ -630,6 +791,10 @@ guiGetAllValues <- function() {
 
 ## Handle callback to the function
 guiExec <- function( lastTouched=NULL ) {
+  cancelled <- guiGetSafe("GUIINTERNALS_cancelled")
+  if( !is.na(cancelled) && !is.null(cancelled) && cancelled==TRUE )
+    return(NULL)
+
   #print( "callback to gui function." );
 
   object <- guiGet( "object" )
@@ -700,7 +865,9 @@ guiExec <- function( lastTouched=NULL ) {
   try( tkconfigure( main, cursor="arrow") )
 
   if( !is.null(res) ) {
-    if( output=='m' ) {
+    if( is.null(output) || ( output!='m' && output!='t' && output!='s' ) ) { ## 01/27/2009
+      return(res) ## If no output window, then return the value
+    }else if( output=='m' ) {
       gui_tkInsertText( object[[length(object)]], as.character(res) )    ## 05/09/2008 -- as.character
       gui_tkInsertText( object[[length(object)]], "\n" )
     }else if( output=='t' ) {
@@ -742,9 +909,9 @@ guiGrid <- function( guiObject, sticky="nws" ) {
   n <- length(guiObject)
   if( n==1 ) {
     if( !is.null(guiObject[[1]]) )
-      tkgrid( guiObject[[1]] )
+      tkgrid( guiObject[[1]] )  ## columnspan=2
   }else if( n==2 ) {
-    tkgrid( guiObject[[1]], guiObject[[2]] )
+    tkgrid( guiObject[[1]], guiObject[[2]]  )
   }else if( n==3 ) {
     tkgrid( guiObject[[1]], guiObject[[2]], guiObject[[3]] )
   }else if( n==4 ) {
@@ -755,9 +922,15 @@ guiGrid <- function( guiObject, sticky="nws" ) {
     tkgrid( guiObject[[1]], guiObject[[2]], guiObject[[3]], guiObject[[4]], guiObject[[5]], guiObject[[6]] )
   }
 
+  ## Allow sticky to be a vector now for different stickinesses
+  #print( "guiGrid sticky" )
+  #print( sticky )
+  if( length(sticky) != n )
+    sticky <- rep( sticky[1], n )
+    
   for( i in 1:n )
     if( !is.null(guiObject[[i]]) )
-      tkgrid.configure( guiObject[[i]], sticky=sticky )
+      tkgrid.configure( guiObject[[i]], sticky=sticky[i] )
 }
 
 gui_tkClearText <- function( obj ) {
@@ -831,11 +1004,18 @@ guiTextEntry <- function( sframe, text, default, width=NULL, helps=NULL ) {
   tVar <- tclVar(default)
 
   if( is.null(width) ) width <- guiGet("ENTRY_WIDTH")
-  frame <- guiFrame( borderwidth=3, sframe=sframe );
+  #frame <- guiFrame( borderwidth=3, sframe=sframe );
+  frame <- guiFrame( borderwidth=0, sframe=sframe, relief="flat" );
+  tkgrid.configure( frame, sticky="news" )
   lab <- tklabel( frame, text=text );
   entry <- tkentry( frame, width=width, textvariable=tVar );
   butHelp <- helpButton( frame, helps, text )
   tkgrid( lab, entry, butHelp )
+  #tkgrid( entry, butHelp, lab )
+  tkgrid.configure( lab, sticky="nes" )
+  tkgrid.configure( entry, sticky="nes" )
+  #tkgrid.configure( butHelp, sticky="nes" )
+  #tkgrid.configure( lab, sticky="nes" )
 
   return( list( object=tVar, guiObject=frame ) )
 }
@@ -852,10 +1032,11 @@ guiSlider <- function( sframe, text, default, min, max, step=(max-min)/100, upda
                      showvalue=FALSE, variable=sliderVal, orient="horizontal",
                      length=guiGet("SLIDER_LENGTH") )
   butHelp <- helpButton( sframe, helps, text )
-  tkgrid( slider,
-          tklabel(frame, text=text),
-          sliderValLabel,
-          butHelp )
+  #tkgrid( slider,
+  #        tklabel(frame, text=text),
+  #        sliderValLabel,
+  #        butHelp )
+  tkgrid( slider, sliderValLabel, tklabel(frame,text=text), butHelp ) ## 02/01/2009
   tkconfigure( sliderValLabel,textvariable=sliderVal )
   if( state=="disabled" ) {
     try( {
@@ -918,13 +1099,13 @@ guiFilename <- function( sframe, text="Filename ...", default="", title="", filt
 ## Options
 guiOption <- function( sframe, text, choices, defaultChoice=1, update=NULL, helps=NULL ){
   ## Create a frame for everything
-  frame <- guiFrame( sframe );
+  frame <- guiFrame( sframe, borderwidth=1, relief="ridge" ); ## groove, sunken, flat, ridge
   ######tkgrid( frame );
   ##tkgrid.configure( frame, sticky="news" );
   ######tkgrid.configure( frame, sticky="nws" );
 
   ## The label
-  lbl <- tklabel( frame, text=text );
+  lbl <- tklabel( frame, text=paste(text,": ",sep="") );
 
   ## The choices
   rb <- list();
@@ -933,7 +1114,7 @@ guiOption <- function( sframe, text, choices, defaultChoice=1, update=NULL, help
 
   ## Create the subframe for each choice
   for( i in 1:length(choices) )
-    rbSubframe[[i]] <- tkframe( frame, relief='groove', borderwidth=1 );
+    rbSubframe[[i]] <- tkframe( frame, relief='groove', borderwidth=0 ); #1 );
 
   ## help button
   butHelp <- helpButton( frame, helps, text )
@@ -1151,6 +1332,51 @@ guiFormals <- function( func, object ) {
   }
   return( func )
 }
+
+## 01.23.2009 -- Additions for the reviewers
+
+## Helper function for guiv, to return the evaluation of the last function
+guiv_last <- function() {
+  return( guiGetSafe( "FGUI_INTERNAL_last_result" ) ) ## so handles 'rivers'
+
+  #func <- guiGetSafe( "FGUI_INTERNAL_guiv_function", ifnotfound=0 )
+  #if( is.numeric(func) )
+  #  stop("No output available from the last gui function ran." )
+  #
+  #formals( func ) <- guiGetAllValues()
+  #return( func() )
+}
+## Instead of returning the list of parameters to the function, this evaluates the function at those parameters and returns those values
+guiv <- function( func=NULL, output=NULL, modal=TRUE, title=NULL, ... ) {
+  if( class(func) != "function" )
+    return( guiv_last() )
+
+  ## hack -- we need the function name!
+  call <- match.call(expand.dots=FALSE)
+  funcName <- call[[match("func",names(call))]]
+  funcName <- as.character( as.expression( funcName ) )
+  print( funcName )
+  if( is.null(title) ) title <- funcName
+
+  ##ret <- gui( func=func, modal=modal, output=output, title=title, ... ) ## codetools 02/11/09
+  gui( func=func, modal=modal, output=output, title=title, ... ) ## codetools 02/11/09
+  if( modal ) {
+    cancelled <- guiGetSafe("GUIINTERNALS_cancelled")
+    if( !is.na(cancelled) && !is.null(cancelled) && cancelled==TRUE )
+      return(NULL)
+      
+    ##formals( func ) <- ret
+    ##return( func() )
+    return( guiv_last() )
+  }
+
+  ## Otherwise it is not modal
+  guiSet( "FGUI_INTERNAL_guiv_function", func )
+  return( invisible() )
+}
+
+## 01.23.2009 -- End of additions for the reviewers
+
 
 ################
 ## DEBUG ONLY ##

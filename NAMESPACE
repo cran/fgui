@@ -1,5 +1,6 @@
 export(
-  gui, guiNestedF, guiExec,
+  gui, guiv,
+  guiNestedF, guiExec,
   guiGetValue, guiGetAllValues, guiSetValue,
   guiSet, guiGet, guiGetSafe,
   guiFrame,

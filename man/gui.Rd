@@ -1,5 +1,6 @@
 \name{gui}
 \alias{gui}
+\alias{guiv}
 \alias{guiNestedF}
 \alias{guiExec}
 \alias{guiFormals}
@@ -13,9 +14,11 @@ Rapidly create a GUI interface for a function you created by automatically creat
 
 The examples are probably the quickest/easiest way of understanding what this code does.
 
-Use \code{getFromNamespace} and \code{assignInNamespace} to customize any of the widget drawing routines (described elsewhere) that are not to your tastes, or alter the source code (get from CRAN so you get one with comments).
+\code{gui} and \code{guiv} are the main routines. The latter returns the value of the function. The former returns the list of arguments chosen by the user, not the value of the function (which would need to be computed separately, see the code in \code{guiv} to see how to do so).
 
-\code{gui} is the main routine, with \code{guiNestedF} providing a means for nested forms (see examples). Along with this is \code{guiFormals}, a modification of the \code{formals} routine to deal with issues.
+Other main but more advanced functions are as follows. \code{guiNestedF} providing a means for nested forms (see examples). Along with this is \code{guiFormals}, a modification of the \code{formals} routine to deal with issues.
+
+Use \code{getFromNamespace} and \code{assignInNamespace} to customize any of the widget drawing routines (described elsewhere) that are not to your tastes, or alter the source code (get from CRAN so you get one with comments).
 
 \code{guiExec} provides the means for `immediate' updates, e.g. for power interfaces; see examples for exactly how to do this.
 
@@ -23,17 +26,22 @@ On the next level, \code{mgui} creates a menuing interface when you want to have
 }
 \usage{
 gui( func,
-     argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
+      argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
       argCommand=NULL, argEdit=NULL, argFilter=NULL,
-     argText=NULL, argType=NULL,
-     argGridOrder=1:length(formals(func)), sticky="nws",
-     title=NULL,
-     exec="Calculate ...",
-     callback=NULL,
-     output='m',
-     helps='auto', helpsFunc=NULL,
-     grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
-     verbose=FALSE )
+      argText=NULL, argType=NULL,
+      argGridOrder=1:length(formals(func)),
+        argGridSticky=rep("a",length(formals(func))),
+        argGridFrame=rep("f",length(formals(func))),
+      title=NULL,
+      exec="OK",
+      closeOnExec=is.null(output), cancelButton=TRUE,
+      callback=NULL,
+      output='m',
+      helps='auto', helpsFunc=NULL,
+      grid=TRUE, modal=NULL, nameFix=TRUE, getFix=TRUE,
+      verbose=FALSE )
+guiv( func=NULL, output=NULL, modal=TRUE, title=NULL, ... )
+     
 guiNestedF( func, nestArg, title=nestArg, exec=NULL, output=NULL, ... )
 guiExec( lastTouched=NULL )
 guiFormals( func, object )
@@ -42,9 +50,12 @@ mgui( func,
       argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
       argCommand=NULL, argEdit=NULL, argFilter=NULL,
       argText=NULL, argType=NULL,
-      argGridOrder=1:length(formals(func)), sticky="nws",
+      argGridOrder=1:length(formals(func)),
+        argGridSticky=rep("a",length(formals(func))),
+        argGridFrame=rep("f",length(formals(func))),
       title=NULL,
-      exec="Calculate ...",
+      exec="OK",
+      closeOnExec=is.null(output), cancelButton=TRUE,
       callback=NULL,
       output='m',
       helps='auto', helpsFunc=NULL,
@@ -66,6 +77,8 @@ fguiWindowPrint( text, endl=TRUE )
   \item{argFilename}{list of default filenames (names same as args), makes arg be a file choosing widget}
   \item{argText}{list of default text for text boxes (names same as args), makes arg be a text box (which is the default anyway).}
   \item{argGridOrder}{Order to be gridded; if two objects have the same order, they will be gridded side by side.}
+  \item{argGridSticky}{Vector of 'sticky' values for each component to be gridded. Each sticky value is a character string with values in n=north, s=south, e=east, w=west. So "nws" would make it take the entire vertical space and be on the west.}
+  \item{argGridFrame}{A vector of values for each unique grid order. The value 'f' is for creating a frame to enclose all of the components within, and 'g' for grids directly. The former looks good with mixed types of components, but the latter will look better for aligning components in columns.}
 
   \item{title}{Window title, defaults to function name.}
 
@@ -81,6 +94,8 @@ fguiWindowPrint( text, endl=TRUE )
     `i': ignore - option will not be drawn, and the default will be used [not fully tested, try creating a seperate function and using the helpsFunc option].
   }
   \item{exec}{String to use when user should press a button to have them call your function. Empty indicates it should not be drawn (e.g. power interfaces, where you might desire sliders, and an auto-updating answer).}
+  \item{closeOnExec}{Whether to close when the 'OK' (default text, but this can be changed) button is pressed.}
+  \item{cancelButton}{Whether to include a button that allows the user to cancel execution of the function.}
   \item{callback}{Name of function to handle callbacks, that takes one parameter, a string for the arg that was updated.}
   \item{output}{one of the above, `t', `s', `m', or NULL; will try to auto-choose this as well. If not `m', then an initial value will be set by running the default parameters.}
 
@@ -92,7 +107,6 @@ fguiWindowPrint( text, endl=TRUE )
   \item{nameFix}{boolean, tries to fix names (replaces underscore and period with a space).}
   \item{getFix}{boolean, tries to fix strings that represent R objects - so for instance, if a user wanted to user the dataset 'rivers', they would only need to type 'rivers' (without the quotation marks) to represent the dataset.}
 
-  \item{sticky}{A combination of 'news' for placement.}
   \item{verbose}{Prints out verbose output. Only useful to try to understand what it is doing if you are wanting to customize.}
 
   \item{nestArg}{Name of the argument to be nested, see examples.}
@@ -109,10 +123,14 @@ fguiWindowPrint( text, endl=TRUE )
   \item{endl}{Whether to insert a carriage return.}
 }
 \value{
-  Returns a list of the arguments user chose after termination.
+  \code{guiv} returns the function evaluated at the list of arguments chosen by the user. \code{gui} returns only the list of the arguments the user has chosen.
+
+  When run in modal mode, the values are returned. When not in modal form, the values may be accessed with \code{guiv()} and \code{guiGetAllValues}.
 }
 \details{
   Examples are strong recommended to get the idea of what this does. The reference below is a great one for learning how to use tcltk.
+
+  Note that NULL, NA, and NaN support is limited to the text entry types only, and may perform unexpectedly for other types.
 }
 \examples{
 
@@ -292,6 +310,114 @@ mgui( rnorm, title=c("Random","Normal") )
 mgui( runif, title=c("Random","Uniform") )
 fguiWindowPrint( "Goes to the main window, now that it has been created." )
 }
+
+###############################
+## *** EXAMPLE 8 ***         ##
+## Basic lm() interface.     ##
+\dontrun{
+lmgui <- function( csvFilename, response, explanatory ) {
+  ## Construct a formula for the 'lm' routine
+  modelStr <- paste( response, "~", paste( explanatory, collapse="+" ) )
+  ## Load in the data
+  data <- read.csv( csvFilename )
+  ## perform the regression, give the summary
+  return <- summary(  lm( formula=modelStr, data=data )  )
+}
+
+lmguiCallback <- function( arg ) {
+  if( arg=="csvFilename" ) {
+    ## A dataset was chosen
+    ## - The filename corresponds to the value at that argument
+    ## - So pull of the names of that dataset
+    datanames <- names( read.csv( guiGetValue("csvFilename") ) )
+    print( datanames )
+    ## - Store the datanames for future use, think of this as a global variable
+    guiSet( "datanames", datanames )
+    ## - Set the possible values for the response
+    setListElements( "response", datanames )
+    setListElements( "explanatory", datanames )
+  }
+}
+
+guiv( lmgui, argFilename=list(csvFilename=NULL), argList=list(response=NULL,explanatory=NULL), callback=lmguiCallback )
+}
+###############################
+## *** EXAMPLE 9 ***         ##
+## Advanced lm() interface.  ##
+\dontrun{
+## The function we will pass to guiv is somewhat of a shell here, that is it would not
+##  make sense to use it from the command line. It's specification
+##  is only to create a GUI using fgui.
+lmgui2 <- function( csvFilename,   ## Create file dialogue, special callback
+                    simData,       ## Only for a command button
+                    response,      ## Required input
+                    explanatory,   ## Required input
+                    scatter,       ## Only for a command button
+                    summary ) {    ## Only for a command button
+  ## Data has been loaded in callback routine,
+  ##  into what can be thought of as a global variable
+  data <- guiGetSafe("PERSONAL_dataset")
+  if( class(data)[1] != "data.frame" )
+    stop("Data must be loaded.") ## Gives error message box
+
+  ## Error check: response and explanatory should have been set
+  if( length(response)==0 ) stop( "Must specify a response." )
+  if( length(explanatory)==0 ) stop( "Explanatory variable expected." )
+
+  ## Run and return the fit from 'lm' linear model
+  modelStr <- paste( response, "~", paste( explanatory, collapse="+" ) )
+  return( lm( formula=modelStr, data=data ) )
+}
+lmgui2Callback <- function( arg ) {
+  if( arg=="csvFilename" ) {
+    ## Dataset chosen from file dialogue,
+    ##  so we should load it in.
+    data <- read.csv( guiGetValue("csvFilename") )
+    guiSet( "PERSONAL_dataset", data ) ## think of as a global variable
+    ## Also set possible values for response and explanatory variables
+    setListElements( "response", names(data) )
+    setListElements( "explanatory", names(data) )
+  }else if( arg=="simData" ) {
+    ## Generate a random set of data, and write to disk
+    set.seed(13); library(MASS);
+    data <- data.frame( mvrnorm( n=100, mu=c(0,0,0), Sigma=matrix(c(1,0.3,0, 0.3,1,0.3, 0,0.3,1),nrow=3) ) )
+    names( data ) <- c("Response","Covariate1","Covariate2")
+    write.csv( data, "lmgui2_generated.csv", row.names=FALSE )
+    ## Now set it as if it was loaded in, and run that callback
+    guiSetValue( "csvFilename", "lmgui2_generated.csv" )
+    lmgui2Callback( "csvFilename" )
+  }else if( arg=="scatter" ) {
+    ## Create a scatterplot of everything in the dataset
+    data <- guiGetSafe("PERSONAL_dataset")
+    response <- guiGetValue("response")
+    wh.response <- which(names(data)==response)
+    if( length(wh.response) != 1 )
+      stop( "One and only one response must be chosen." )
+    if( class(data)[1] != "data.frame" )
+      stop( "Data must be loaded." )
+    par( mfrow=rep( ceiling(sqrt(ncol(data)-1)), 2 ) )
+    for( i in setdiff(1:ncol(data),wh.response) )
+      plot( data[[i]], data[[wh.response]],
+            xlab=names(data)[i], ylab=names(data)[wh.response] )
+  }else if( arg=="summary" ) {
+    print( summary( guiExec() ) ) ## when no output, guiExec returns value
+  }
+}
+fit <- guiv( lmgui2,
+              argFilename=list(csvFilename=NULL),
+              argList=list(response=NULL,explanatory=NULL),
+              argCommand=list(simData=NULL, scatter=NULL, summary=NULL),
+              callback=lmgui2Callback,
+              argGridOrder=c(1,1,2,2,3,3), ## Multi-column ordering
+              argText=c(csvFilename="Load data (csv)",
+                        simData="Simulate data",
+                        response="Choose response variable",
+                        explanatory="Choose explanatory variable",
+                        scatter="Generate scatterplot to response variable",
+                        summary="Print summary")
+      )
+}
+
 }
 \references{
 Dalgard, Peter and Wettenhall, James. R tcltk examles. \url{http://www.sciviews.org/_rgui/tcltk/index.html}

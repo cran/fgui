@@ -84,4 +84,32 @@ setListElements( name, elements )
 
   The other routines return a list. The first object, \code{object}, is either a tclVar or the string `no object' for things like command buttons where this does not make sense (use \code{main<-tktoplevel(); res<-tkFrame(main); tclvalue(res$object)}, e.g., to get the value). The second object, \code{guiObject} returns a reference to the tcltk frame gui the object is contained in for gridding purposes.
 }
+\examples{
+
+\dontrun{
+## Create a form with tcltk routines
+main <- tktoplevel()
+## Create some widgets for that form
+## - Create a frame, and put two widgets in it
+## - Note that guiTextEntry objects will be gridded automatically
+##   (which is why as an example they are put in a frame)
+fr <- guiFrame( sframe=main )
+te1 <- guiTextEntry( sframe=fr, text="Text entry 1", default="default" )
+te2 <- guiTextEntry( sframe=fr, text="Text entry 2", default="" )
+## - Put the rest of the widgets on the main frame
+sl <- guiSlider( sframe=main, text="Slider", default=5, min=1, max=10 )
+fl <- guiFilename( sframe=main, text="Filename", default="foo.txt" )
+op <- guiOption( sframe=main, text="Option", choices=c("one","two","three") )
+ed <- guiEdit( sframe=main, text="Edit", default="Edit box" )
+## Now grid the widgets on the main form
+tkgrid( fr )
+tkgrid.configure( fr, sticky="nws" ) ## Handle alignment, as in tcl/tk package
+tkgrid( sl$guiObject )
+tkgrid( fl$guiObject )
+tkgrid( op$guiObject )
+tkgrid( ed$guiObject )
+print( tclvalue(fl$object) ) ## will print out "foo.txt", unless modified
+}
+
+}
 \keyword{interface}
