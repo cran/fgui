@@ -1,0 +1,6 @@
+%\VignetteIndexEntry{fgui}
+
+\documentclass{article}
+\begin{document}
+\end{document}
+
