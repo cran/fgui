@@ -23,7 +23,7 @@ guiGetSafe( x, ifnotfound=NA )
 \arguments{
   \item{i}{Which item in the list to return. If a string, the name of the corresponding arg. If numeric, the index to the arg.}
   \item{x}{String to represent the object. See examples below for constants.}
-  \item{mode}{}
+  \item{mode}{See \code{mode}; returns results corresponding only to a certain type of object, such as numeric.}
   \item{ifnotfound}{Value to return if not found.}
   \item{value}{Value to set in the namespace.}
 }

@@ -7,13 +7,16 @@ readFile <- function( filename ) {
 }
 
 STRTRIM <- function( str ) {
+  print(str)
   ## leading spaces
   str <- sub('[[:space:]]*', '', str)
   ## lagging spaces
-  return( sub('[[:space:]]*+$', '', str) )
+  return( sub('[[:space:]]*$', '', str) )
 }
 
 parseArguments <- function( lines ) {
+  print(lines)
+
   ## first separate into a list of strings
   cur <- 0
   lastEmpty <- FALSE
@@ -83,31 +86,73 @@ parseArguments <- function( lines ) {
 #  return( res )
 #}
 
-parseHelp <- function( func ) {
-  filename <- help( func, offline=FALSE, chmhelp=NA, htmlhelp=NA )[[1]]
+# parseHelp <- function( func ) {
+#   filename <- help( func, offline=FALSE, chmhelp=NA, htmlhelp=NA )[[1]]
+#
+#   if( !file.exists(filename) ) {
+#     ## It might be in a zip file in windows, lets try to extract it
+#
+#     ## parse off the function name
+#     funcname <- unlist( strsplit( filename, "/" ) )
+#     funcname <- funcname[[length(funcname)]]
+#
+#     ## get the path to the zip file
+#     ziparchive <- paste( substr( filename, 1, nchar(filename)-nchar(funcname) ), "Rhelp.zip", sep="" )
+#     if( file.exists(ziparchive) ) {
+#       ## then we _can_ extract it
+#       #filename <- zip.file.extract( funcname, ziparchive )
+#       ## Arghhh!!!! Sometimes I really, _really_ hate R
+#       tmpd <- tempdir()
+#       rc <- .Internal( int.unzip(ziparchive,funcname,tmpd) )
+#       if( rc==0 )
+#         filename <- attr(rc,"extracted")
+#     }
+#   }
+#
+#   ## Read in all of the lines
+#   lines <- readFile( filename )
+#
+#   ## Extract out the relevant lines
+#   lineStart <- unlist( lapply( lines, substr, start=1, stop=2 ) )
+#   section <- which( lineStart == "_\b" )
+#   usageSection <- which( lines == "_\bA_\br_\bg_\bu_\bm_\be_\bn_\bt_\bs:" )
+#
+#   sectionSection <- which( usageSection==section )
+#   if( sectionSection == length(section) )
+#     section <- c(section, length(lines)+1)
+#   usageLinesB <- section[sectionSection]+1
+#   usageLinesE <- section[sectionSection+1]-1
+#   lines <- lines[usageLinesB:usageLinesE]
+#
+#   return( parseArguments(lines) )
+# }
 
-  if( !file.exists(filename) ) {
-    ## It might be in a zip file in windows, lets try to extract it
+## DEBUG ONLY
+#lmHelp <- parseHelp( "lm" )
 
-    ## parse off the function name
-    funcname <- unlist( strsplit( filename, "/" ) )
-    funcname <- funcname[[length(funcname)]]
 
-    ## get the path to the zip file
-    ziparchive <- paste( substr( filename, 1, nchar(filename)-nchar(funcname) ), "Rhelp.zip", sep="" )
-    if( file.exists(ziparchive) ) {
-      ## then we _can_ extract it
-      #filename <- zip.file.extract( funcname, ziparchive )
-      ## Arghhh!!!! Sometimes I really, _really_ hate R
-      tmpd <- tempdir()
-      rc <- .Internal( int.unzip(ziparchive,funcname,tmpd) )
-      if( rc==0 )
-        filename <- attr(rc,"extracted")
-    }
-  }
+# temp <- tools::Rd2txt(.getHelpFile(file), out = tempfile("Rtxt"),
+#                     package = pkgname)
 
-  ## Read in all of the lines
-  lines <- readFile( filename )
+parseHelp = function(func){
+  require(tools)
+
+
+  a = help(func)
+  #print(dir(a[[1]]))
+  toks = unlist(strsplit(a[[1]], "/"))
+  toks = toks[-length(toks)]
+  path = paste(toks, collapse="/")
+  rdbfile = dir(path, pattern="*.rdb")
+  toks = unlist(strsplit(rdbfile, "\\."))
+  #print(toks)
+  toks = toks[-length(toks)]
+  rdbfile = paste(toks, collapse=".")
+  rdbfile = paste(path, rdbfile, sep="/")
+  #print(rdbfile)
+  rd = tools:::fetchRdDB(rdbfile, func)
+  lines = readFile(tools::Rd2txt(rd, out=tempfile("Rtxt")))
+
 
   ## Extract out the relevant lines
   lineStart <- unlist( lapply( lines, substr, start=1, stop=2 ) )
@@ -123,6 +168,4 @@ parseHelp <- function( func ) {
 
   return( parseArguments(lines) )
 }
-
-## DEBUG ONLY
-#lmHelp <- parseHelp( "lm" )
+#a = parseHelp2("cor")
