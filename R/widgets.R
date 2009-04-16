@@ -516,9 +516,9 @@ gui <- function( func,
     #print( ago )
     #print( "argGridOrder" )
     #print( argGridOrder )
-  
+
     agos <- which( argGridOrder == ago )
-    
+
     sframe <- main
     #print( "argGridFrame" )
     #print( argGridFrame )
@@ -552,7 +552,7 @@ gui <- function( func,
       if( verbose ) cat( "Creating widget ", i, "\n" )
       helpsi <- elt(helps,fargNames[i],die=FALSE)
       res <- NULL
-      
+
       if( fargTypes[i] == 't' ) {
         ## Text entry
         #var <-  tclVar(gv(i))
@@ -629,7 +629,7 @@ gui <- function( func,
     ##guiGrid( guiObject, sticky=argGridSticky[agos] )
     ###guiGrid( subset( guiObject, argGridOrder==ago ), sticky="nws" )
     guiGrid( subset( guiObject, argGridOrder==ago ), sticky=argGridSticky[agos] )
-    
+
   }## unique(argGridOrder)
   ##}
 
@@ -856,10 +856,13 @@ guiExec <- function( lastTouched=NULL ) {
     }
   }
 
+  #cat("JUST BEFORE EVALUATING...\n")
 
   res <- NULL;
   tryCatch( {res <- func()},
             error=function(e){gui_errorMessage(e$message)} )
+
+  #cat("JUST AFTER EVALUATING...\n")
 
   ## Unset the business
   try( tkconfigure( main, cursor="arrow") )
@@ -927,7 +930,7 @@ guiGrid <- function( guiObject, sticky="nws" ) {
   #print( sticky )
   if( length(sticky) != n )
     sticky <- rep( sticky[1], n )
-    
+
   for( i in 1:n )
     if( !is.null(guiObject[[i]]) )
       tkgrid.configure( guiObject[[i]], sticky=sticky[i] )
@@ -1364,7 +1367,7 @@ guiv <- function( func=NULL, output=NULL, modal=TRUE, title=NULL, ... ) {
     cancelled <- guiGetSafe("GUIINTERNALS_cancelled")
     if( !is.na(cancelled) && !is.null(cancelled) && cancelled==TRUE )
       return(NULL)
-      
+
     ##formals( func ) <- ret
     ##return( func() )
     return( guiv_last() )

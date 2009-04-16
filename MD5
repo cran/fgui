@@ -1,0 +1,10 @@
+ec689f3876931ea1b7aa40c2f8101af7 *DESCRIPTION
+475c8927fcc9493114937f4eb324f75d *NAMESPACE
+befa6e5945a051f313019cfb6b7496e6 *R/fguiWindow.R
+585bf22a446822c80ed8130ead6350a1 *R/parseHelp.R
+55424d925e1e28d60c9981da0e9a1f4e *R/widgets.R
+71a9d51d5dfe964cb04abac2107b8c44 *inst/CITATION
+fbfcf5b73dfa9be2a00b1276722c8618 *inst/doc/fgui.pdf
+67492fed5074aa17325f841b9efaf29c *man/gui.Rd
+3229d7cd3ed5f40efe07c941b2d9e981 *man/guiFrame.Rd
+f2c0db9a034d68ebc0f2c7ec0e7e66ce *man/guiGetValue.Rd

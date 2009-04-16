@@ -7,7 +7,7 @@ readFile <- function( filename ) {
 }
 
 STRTRIM <- function( str ) {
-  print(str)
+  #print(str)
   ## leading spaces
   str <- sub('[[:space:]]*', '', str)
   ## lagging spaces
@@ -15,7 +15,7 @@ STRTRIM <- function( str ) {
 }
 
 parseArguments <- function( lines ) {
-  print(lines)
+  #print(lines)
 
   ## first separate into a list of strings
   cur <- 0
@@ -169,3 +169,63 @@ parseHelp = function(func){
   return( parseArguments(lines) )
 }
 #a = parseHelp2("cor")
+
+
+
+parseHelp = function(functionName = "rnorm"){
+  file = help(functionName, help_type="text")
+
+  ## Code taken from print.help_files_with_topic
+  path <- dirname(file)
+  dirpath <- dirname(path)
+  pkgname <- basename(dirpath)
+  RdDB <- file.path(path, pkgname)
+  if (file.exists(paste(RdDB, "rdx", sep = "."))) {
+    temp <- tools::Rd2txt(tools:::fetchRdDB(RdDB,
+      basename(file)), out = tempfile("Rtxt"), package = pkgname)
+    #file.show(temp, title = gettextf("R Help on '%s'",
+    #  topic), delete.file = TRUE)
+    file = temp
+  }
+  else {
+    ##zfile <- zip.file.extract(file, "Rhelp.zip")
+    zfile = unzip("Rhelp.zip", files=file)
+    if (file.exists(zfile)) {
+      first <- readLines(zfile, n = 1L)
+      enc <- if (length(grep("\\(.*\\)$", first)))
+        sub("[^(]*\\((.*)\\)$", "\\1", first)
+      else ""
+      if (enc == "utf8")
+        enc <- "UTF-8"
+      if (.Platform$OS.type == "windows"
+&& enc == ""
+&& l10n_info()$codepage < 1000)
+        enc <- "CP1252"
+      #file.show(zfile, title = gettextf("R Help on '%s'",
+      #  topic), delete.file = (zfile != file), encoding = enc)
+      file = zfile
+    }
+    else stop(gettextf("No text help for '%s' is available:\ncorresponding file is missing",
+      functionName), domain = NA)
+  }
+
+  ##return(file)
+
+
+  lines = readFile(file)
+
+  ## Extract out the relevant lines
+  lineStart <- unlist( lapply( lines, substr, start=1, stop=2 ) )
+  section <- which( lineStart == "_\b" )
+  usageSection <- which( lines == "_\bA_\br_\bg_\bu_\bm_\be_\bn_\bt_\bs:" )
+
+  sectionSection <- which( usageSection==section )
+  if( sectionSection == length(section) )
+    section <- c(section, length(lines)+1)
+  usageLinesB <- section[sectionSection]+1
+  usageLinesE <- section[sectionSection+1]-1
+  lines <- lines[usageLinesB:usageLinesE]
+
+  return( parseArguments(lines) )
+
+}
