@@ -1,5 +1,5 @@
 Package: fgui
-Version: 1.0-1
+Version: 1.0-2
 Date: 2009-04-16
 Title: Function GUI
 Author: Thomas Hoffmann <tjhoffm@gmail.com>
@@ -18,6 +18,6 @@ Description: Rapidly create a GUI interface for a function you created
 License: GPL
 URL: http://www.people.fas.harvard.edu/~tjhoffm/fgui.html
 LazyLoad: true
-Packaged: 2010-08-12 06:35:47 UTC; tom
+Packaged: 2011-04-14 00:26:08 UTC; tom
 Repository: CRAN
-Date/Publication: 2010-08-12 11:22:14
+Date/Publication: 2011-04-14 07:14:37

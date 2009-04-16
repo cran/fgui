@@ -12,7 +12,7 @@
 The guiGet and guiSet routines get at more internal code to the interface. In particular guiSet can set some internal constants.
 }
 \usage{
-guiGetValue <- function( i )
+guiGetValue( i )
 guiGetAllValues()
 guiSetValue( i, value )
 
