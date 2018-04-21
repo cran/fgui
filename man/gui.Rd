@@ -10,7 +10,7 @@
 \alias{fguiWindowPrint}
 \title{fgui Main Function}
 \description{
-Rapidly create a GUI interface for a function you created by automatically creating widgets for arguments of the function. Automatically parses help routines for context-sensative help to these arguments. The interface is essentially a wrapper to some tcltk routines to both simplify and facilitate GUI creation. More advanced tcltk routines/GUI objects can be incorporated into the interface for greater customization for the more experienced.
+Rapidly create a GUI interface for a function you created by automatically creating widgets for arguments of the function. *No longer* automatically parses help routines for context-sensative help to these arguments (interface to this has kept changing between R versions, so I just disabled it, to prevent future breakage). The interface is essentially a wrapper to some tcltk routines to both simplify and facilitate GUI creation. More advanced tcltk routines/GUI objects can be incorporated into the interface for greater customization for the more experienced.
 
 The examples are probably the quickest/easiest way of understanding what this code does.
 
@@ -25,42 +25,42 @@ Use \code{getFromNamespace} and \code{assignInNamespace} to customize any of the
 On the next level, \code{mgui} creates a menuing interface when you want to have seperate routines to create multiple graphical widgets. For example, when converting multiple command line routines in an R package. Just use \code{mgui} instead of \code{fgui}, for the most part -- but if you want the interface modal, only do so on the last mgui call. The functions \code{fguiNewMenu}, \code{fguiWindow}, and \code{fguiWindowPrint} provide lower level workings for this. \code{fguiNewMenu} allows for more general menu additions. \code{fguiWindow} allows for more options in creating the main window (otherwise it is automatically created on the first \code{mgui} call). \code{fguiWindowPrint} prints directly to the console, although many times this is also caught by other routines.
 }
 \usage{
-gui( func,
-      argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
-      argCommand=NULL, argEdit=NULL, argFilter=NULL,
-      argText=NULL, argType=NULL,
-      argGridOrder=1:length(formals(func)),
-        argGridSticky=rep("a",length(formals(func))),
-        argGridFrame=rep("f",length(formals(func))),
-      title=NULL,
-      exec="OK",
-      closeOnExec=is.null(output), cancelButton=TRUE,
-      callback=NULL,
-      output='m',
-      helps='auto', helpsFunc=NULL,
-      grid=TRUE, modal=NULL, nameFix=TRUE, getFix=TRUE,
-      verbose=FALSE )
+gui(func,
+  argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
+  argCommand=NULL, argEdit=NULL, argFilter=NULL,
+  argText=NULL, argType=NULL,
+  argGridOrder=1:length(formals(func)),
+    argGridSticky=rep("a",length(formals(func))),
+    argGridFrame=rep("f",length(formals(func))),
+  title=NULL,
+  exec="OK",
+  closeOnExec=is.null(output), cancelButton=TRUE,
+  callback=NULL,
+  output='m',
+  helps='auto', helpsFunc=NULL,
+  grid=TRUE, modal=NULL, nameFix=TRUE, getFix=TRUE,
+  verbose=FALSE )
 guiv( func=NULL, output=NULL, modal=TRUE, title=NULL, ... )
      
 guiNestedF( func, nestArg, title=nestArg, exec=NULL, output=NULL, ... )
 guiExec( lastTouched=NULL )
 guiFormals( func, object )
 
-mgui( func,
-      argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
-      argCommand=NULL, argEdit=NULL, argFilter=NULL,
-      argText=NULL, argType=NULL,
-      argGridOrder=1:length(formals(func)),
-        argGridSticky=rep("a",length(formals(func))),
-        argGridFrame=rep("f",length(formals(func))),
-      title=NULL,
-      exec="OK",
-      closeOnExec=is.null(output), cancelButton=TRUE,
-      callback=NULL,
-      output='m',
-      helps='auto', helpsFunc=NULL,
-      grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
-      verbose=FALSE )
+mgui(func,
+  argOption=NULL, argFilename=NULL, argList=NULL, argSlider=NULL,
+  argCommand=NULL, argEdit=NULL, argFilter=NULL,
+  argText=NULL, argType=NULL,
+  argGridOrder=1:length(formals(func)),
+    argGridSticky=rep("a",length(formals(func))),
+    argGridFrame=rep("f",length(formals(func))),
+  title=NULL,
+  exec="OK",
+  closeOnExec=is.null(output), cancelButton=TRUE,
+  callback=NULL,
+  output='m',
+  helps='auto', helpsFunc=NULL,
+  grid=TRUE, modal=TRUE, nameFix=TRUE, getFix=TRUE,
+  verbose=FALSE )
 fguiNewMenu( menuText, command=function(){print(paste(menuText,collapse=" > "))} )
 fguiWindow( basicMenu=TRUE, title="fgui", text="Please choose an option from the menu." )
 fguiWindowPrint( text, endl=TRUE )
@@ -99,7 +99,7 @@ fguiWindowPrint( text, endl=TRUE )
   \item{callback}{Name of function to handle callbacks, that takes one parameter, a string for the arg that was updated.}
   \item{output}{one of the above, `t', `s', `m', or NULL; will try to auto-choose this as well. If not `m', then an initial value will be set by running the default parameters.}
 
-  \item{helps}{`auto' indicates it will try to load in the help from the package help, if possible. Otherwise this can be a list of strings (with the function argument name for the names) for help.}
+  \item{helps}{`auto' indicates it will try to load in the help from the package help, if possible (deprecated and disabled). Otherwise this can be a list of strings (with the function argument name for the names) for help.}
   \item{helpsFunc}{NULL indicates it will use the name of the function. If a string is provided, it will try to load the help on the function specified by that string instead.}
 
   \item{grid}{whether to grid the objects or not (otherwise, just let the user do it)}
@@ -253,7 +253,8 @@ summaryStats <- function( data ) {
   return( paste( "Mean = ", mean(data), ", Variance = ", var(data), sep="" ) )
 }
 
-gui( summaryStats, helps=list(data="Enter the data as an R vector, e.g. 'c(13,66,44,27)' or enter the text 'rivers' to use a builtin dataset (without quotes).") )
+gui(summaryStats, helps=list(
+  data="Enter vector, e.g. 'c(13,66,44,27)' or 'rivers' for builtin dataset (without quotes)."))
 }
 
 \dontrun{
@@ -300,7 +301,8 @@ gui( guif, argCommand=list(abc=guiNestedF(f1,"abc"), def=guiNestedF(f2,"def")) )
 ## The menuing interface.    ##
 ## Call just as you would gui, same options, same everything,
 ##  EXCEPT title is now a vector indicating the menu path.
-## If you want it modal though, do not do so until the last mgui call, or it will be modal inbetween additions to the menu!
+## If you want it modal though, do not do so until the last mgui call, 
+##  or it will be modal inbetween additions to the menu!
 \dontrun{
 fguiWindowPrint( "Goes to the console because no window has been created." )
 mgui( rgeom, title=c("Random","Geometric") )
@@ -339,7 +341,8 @@ lmguiCallback <- function( arg ) {
   }
 }
 
-guiv( lmgui, argFilename=list(csvFilename=NULL), argList=list(response=NULL,explanatory=NULL), callback=lmguiCallback )
+guiv(lmgui, argFilename=list(csvFilename=NULL), 
+  argList=list(response=NULL,explanatory=NULL), callback=lmguiCallback)
 }
 ###############################
 ## *** EXAMPLE 9 ***         ##
@@ -380,7 +383,8 @@ lmgui2Callback <- function( arg ) {
   }else if( arg=="simData" ) {
     ## Generate a random set of data, and write to disk
     set.seed(13); library(MASS);
-    data <- data.frame( mvrnorm( n=100, mu=c(0,0,0), Sigma=matrix(c(1,0.3,0, 0.3,1,0.3, 0,0.3,1),nrow=3) ) )
+    data <- data.frame( mvrnorm( n=100, mu=c(0,0,0), 
+      Sigma=matrix(c(1,0.3,0, 0.3,1,0.3, 0,0.3,1),nrow=3) ) )
     names( data ) <- c("Response","Covariate1","Covariate2")
     write.csv( data, "lmgui2_generated.csv", row.names=FALSE )
     ## Now set it as if it was loaded in, and run that callback
@@ -420,6 +424,6 @@ fit <- guiv( lmgui2,
 
 }
 \references{
-Dalgard, Peter and Wettenhall, James. R tcltk examles. \url{http://www.sciviews.org/_rgui/tcltk/index.html}
+Dalgard, Peter and Wettenhall, James. R tcltk examples.
 }
 \keyword{interface}

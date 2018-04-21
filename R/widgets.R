@@ -81,8 +81,9 @@ clearEnvironment <- function() {
 
 loadTclTkOrDie <- function()
 {
-  if (!require("tcltk"))
-    stop("You need to have loaded tcl/tk to use this function {e.g. library(tcltk)}.")
+  ##if (!require("tcltk"))
+  ##  stop("You need to have loaded tcl/tk to use this function {e.g. library(tcltk)}.")
+  return(invisible()) ## It's imported, so I guess now this is never required???
 }
 
 numericFix <- function( v ) {
@@ -216,7 +217,7 @@ gui <- function( func,
                  helps='auto', helpsFunc=NULL,
                  grid=TRUE, modal=NULL, nameFix=TRUE, getFix=TRUE,
                  verbose=FALSE ) {
-  require( tcltk )
+  ##require( tcltk )  ## 02/20/2014
 
   if( verbose ) {
     print( "argGrid..." )
@@ -499,7 +500,7 @@ gui <- function( func,
   ########################
 
   ## Create the main window
-  require( tcltk )
+  ## require( tcltk ) ## 02/20/2014
   main <- tktoplevel()
   tkwm.title( main, title )
   if( verbose ) cat( "Created main window, proceeding to create all widgets...\n" )

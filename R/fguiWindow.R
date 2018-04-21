@@ -1,6 +1,6 @@
 ## We could call this with an empty fgui() ...
 fguiWindow <- function( basicMenu=TRUE, title="fgui", text="Please choose an option from the menu." ) {
-  require( tcltk )
+  ## require( tcltk )  ## 02/20/2014 -- imports so don't use
 
   ## cleanup from previous window...
   clearMenu()

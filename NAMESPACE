@@ -12,3 +12,6 @@ export(
 )
 
 import( tcltk )
+import( tools )
+
+importFrom("utils", "help", "unzip")
